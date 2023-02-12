@@ -9,6 +9,8 @@ export class GoogleConfig extends BaseConfig implements IGoogleConfig {
 
   public readonly redirect_uri: string;
 
+  public readonly youtube_channel_id: string;
+
   public constructor(json: IGoogleConfig) {
 
     super();
@@ -21,6 +23,7 @@ export class GoogleConfig extends BaseConfig implements IGoogleConfig {
       client_id,
       client_secret,
       redirect_uri,
+      youtube_channel_id,
     } = json;
 
     if (typeof client_id !== "string" || client_id === "") {
@@ -38,6 +41,11 @@ export class GoogleConfig extends BaseConfig implements IGoogleConfig {
     }
     new URL(redirect_uri);
     this.redirect_uri = redirect_uri;
+
+    if (typeof youtube_channel_id !== "string" || youtube_channel_id === "") {
+      throw new Error("GoogleConfig.youtube_channel_id must be a string.");
+    }
+    this.youtube_channel_id = youtube_channel_id;
 
   }
 

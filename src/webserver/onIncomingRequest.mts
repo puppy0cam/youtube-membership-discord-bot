@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "http";
 import { handleDiscordCallback } from "./handleDiscordCallback.mjs";
+import { handleGoogleCallback } from "./handleGoogleCallback.mjs";
 
 export async function onIncomingRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
 
@@ -8,6 +9,7 @@ export async function onIncomingRequest(request: IncomingMessage, response: Serv
   try {
 
     switch (url.pathname) {
+      case "/auth/google/callback": return await handleGoogleCallback(url, response);
       case "/auth/discord/callback": return await handleDiscordCallback(url, response);
       default:
         response.writeHead(404, { "Content-Type": "text/plain" });

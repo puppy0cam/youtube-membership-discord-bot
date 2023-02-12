@@ -7,4 +7,6 @@ export interface IGoogleConfig {
 
   readonly client_secret: string;
 
+  readonly youtube_channel_id: string;
+
 }

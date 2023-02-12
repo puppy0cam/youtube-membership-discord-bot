@@ -1,50 +1,11 @@
 import { google, youtube_v3 } from "googleapis";
-import type { IncomingMessage, ServerResponse } from "http";
-import { validate } from "uuid";
+import type { ServerResponse } from "http";
 import config from "../config.mjs";
 import { database } from "../database/database.mjs";
 
-export async function handleGoogleCallback(url: URL, request: IncomingMessage, response: ServerResponse): Promise<void> {
-  const state = url.searchParams.get("state");
-  if (!state) {
-    response.writeHead(400, { "Content-Type": "text/plain" });
-    response.end("Bad Request");
-    return;
-  }
-  if (!validate(state)) {
-    response.writeHead(400, { "Content-Type": "text/plain" });
-    response.end("Bad Request");
-    return;
-  }
+export async function handleGoogleCallback(url: URL, response: ServerResponse): Promise<void> {
   const code = url.searchParams.get("code");
   if (!code) {
-    response.writeHead(400, { "Content-Type": "text/plain" });
-    response.end("Bad Request");
-    return;
-  }
-  const { rows: [discord] } = await database.query<{ created_at: Date; expires_at: Date; access_token: string; token_type: string; refresh_token: string; scope: string; current_state: any | null; youtube_channel_id: string | null; }>(`
-    SELECT
-      "created_at"
-     ,"expires_at"
-     ,"access_token"
-     ,"token_type"
-     ,"refresh_token"
-     ,"scope"
-     ,"current_state"
-     ,"youtube_channel_id"
-    FROM
-      "pyro_yt_member_handler"."discord_auth"
-    WHERE
-      "id" = $1
-    LIMIT 1
-    ;
-  `, [state]);
-  if (!discord) {
-    response.writeHead(400, { "Content-Type": "text/plain" });
-    response.end("Bad Request");
-    return;
-  }
-  if (discord.youtube_channel_id) {
     response.writeHead(400, { "Content-Type": "text/plain" });
     response.end("Bad Request");
     return;
@@ -60,28 +21,11 @@ export async function handleGoogleCallback(url: URL, request: IncomingMessage, r
     redirect_uri: config.google.redirect_uri,
   });
   oauth2Client.setCredentials(google_token);
-  if (!google_token.scope?.split(" ").includes("https://www.googleapis.com/auth/youtube.readonly")) {
-    const query = new URLSearchParams();
-    query.append("token", discord.access_token);
-    query.append("token_type_hint", "access_token");
-    fetch("https://discord.com/api/v10/oauth2/token/revoke", {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${config.discord.bot.id}:${config.discord.bot.secret}`).toString("base64")}`,
-      },
-      body: query.toString(),
-    });
-    await database.query(`
-      DELETE FROM
-        "pyro_yt_member_handler"."discord_auth"
-      WHERE
-        "id" = $1
-      ;
-    `, [state]);
-    await oauth2Client.revokeCredentials();
+  const scoped = google_token.scope?.split(" ") ?? [];
+  if (!scoped.includes("https://www.googleapis.com/auth/youtube.readonly") || !scoped.includes("https://www.googleapis.com/auth/youtube.channel-memberships.creator")) {
     response.writeHead(400, { "Content-Type": "text/plain" });
-    response.end("Bad Request");
+    response.end("Bad Request - Missing Scoped");
+    await oauth2Client.revokeCredentials();
     return;
   }
   const youtube = new youtube_v3.Youtube({
@@ -92,27 +36,9 @@ export async function handleGoogleCallback(url: URL, request: IncomingMessage, r
     mine: true,
   });
   if (!yt_channels?.length) {
-    const query = new URLSearchParams();
-    query.append("token", discord.access_token);
-    query.append("token_type_hint", "access_token");
-    fetch("https://discord.com/api/v10/oauth2/token/revoke", {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${config.discord.bot.id}:${config.discord.bot.secret}`).toString("base64")}`,
-      },
-      body: query.toString(),
-    });
-    await database.query(`
-      DELETE FROM
-        "pyro_yt_member_handler"."discord_auth"
-      WHERE
-        "id" = $1
-      ;
-    `, [state]);
-    await oauth2Client.revokeCredentials();
     response.writeHead(400, { "Content-Type": "text/plain" });
-    response.end("No YouTube");
+    response.end("No YouTube Channel");
+    await oauth2Client.revokeCredentials();
     return;
   }
   let yt_channel;
@@ -123,39 +49,46 @@ export async function handleGoogleCallback(url: URL, request: IncomingMessage, r
     }
   }
   if (!yt_channel) {
-    const query = new URLSearchParams();
-    query.append("token", discord.access_token);
-    query.append("token_type_hint", "access_token");
-    fetch("https://discord.com/api/v10/oauth2/token/revoke", {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${config.discord.bot.id}:${config.discord.bot.secret}`).toString("base64")}`,
-      },
-      body: query.toString(),
-    });
-    await database.query(`
-      DELETE FROM
-        "pyro_yt_member_handler"."discord_auth"
-      WHERE
-        "id" = $1
-      ;
-    `, [state]);
-    await oauth2Client.revokeCredentials();
     response.writeHead(400, { "Content-Type": "text/plain" });
     response.end("No YouTube channels detected");
+    await oauth2Client.revokeCredentials();
     return;
   }
+  if (!yt_channel.id) {
+    response.writeHead(400, { "Content-Type": "text/plain" });
+    response.end("No YouTube channel ID detected");
+    await oauth2Client.revokeCredentials();
+    return;
+  }
+  if (yt_channel.id !== config.google.youtube_channel_id) {
+    response.writeHead(400, { "Content-Type": "text/plain" });
+    response.end("You have not authorised the correct YouTube channel");
+    await oauth2Client.revokeCredentials();
+    return;
+  }
+  const {
+    access_token,
+    expiry_date,
+    id_token,
+    refresh_token,
+    scope,
+    token_type,
+  } = oauth2Client.credentials;
+  const expiry_date_date = expiry_date == null ? null : new Date(expiry_date);
   await database.query(`
-    UPDATE
-      "pyro_yt_member_handler"."discord_auth"
-    SET
-      "youtube_channel_id" = $1
-    WHERE
-      "id" = $2
+    INSERT INTO "pyro_yt_member_handler"."youtube_auth" ("channel_id", "refresh_token", "expiry_date", "access_token", "token_type", "id_token", "scope") VALUES
+    ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT ON CONSTRAINT "youtube_auth_pkey" DO UPDATE SET "refresh_token" = EXCLUDED."refresh_token", "expiry_date" = EXCLUDED."expiry_date", "access_token" = EXCLUDED."access_token", "token_type" = EXCLUDED."token_type", "id_token" = EXCLUDED."id_token", "scope" = EXCLUDED."scope"
     ;
-  `, [yt_channel.id, state]);
-  await oauth2Client.revokeCredentials();
+  `, [
+    yt_channel.id,
+    refresh_token,
+    expiry_date_date,
+    access_token,
+    token_type,
+    id_token,
+    scope,
+  ]);
   response.writeHead(200, { "Content-Type": "text/plain" });
-  response.end("Successfully associated your YouTube account with your Discord account. Please note that we are still working thing out on the YouTube end to retrieve your membership information, so you currently won't be able to claim your roles until we get that sorted out.");
+  response.end("Successfully authenticated to YouTube.");
 }
