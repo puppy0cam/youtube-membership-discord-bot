@@ -1,0 +1,9 @@
+{
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "editor.detectIndentation": false,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.tabSize": 2
+}

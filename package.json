@@ -1,0 +1,24 @@
+{
+  "name": "yt-member-handler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.mjs",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --enable-source-maps ."
+  },
+  "private": true,
+  "author": "puppy0cam <puppy0caminminecraft@gmail.com>",
+  "license": "NONE",
+  "dependencies": {
+    "discord.js": "^14.7.1",
+    "googleapis": "^110.0.0",
+    "pg": "^8.8.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.6.6",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^4.9.4"
+  }
+}
