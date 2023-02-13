@@ -66,6 +66,14 @@ async function *getMembershipsFromYouTube(database: PoolClient) {
         membershipsDetails,
         memberDetails,
       } = i.snippet!;
+      // TODO: Parse historical data
+      // I need some real world data to test this,
+      // there isn't sufficient documentation on this part of the YouTube API
+      // And there's also some inconsistencies between the web docs and the type docs.
+      // The good news is that this should be the last thing to do
+      // and when I get this done, the bot will be fully functional for users.
+      // Even without this segment done, people will still be able to auth,
+      // the bot will just get some info wrong.
       if (!membershipsDetails || !memberDetails || !memberDetails.channelId) continue;
       const result: IYouTubeMembershipData = {
         channel_id: memberDetails.channelId,
