@@ -1,0 +1,28 @@
+{
+  "google": {
+    "redirect_uri": "http://localhost:8097/auth/google/callback",
+    "client_id": "",
+    "client_secret": "",
+    "youtube_channel_id": "UCdc_JyNaB5VJ0gdWUtWfGDg"
+  },
+  "discord": {
+    "bot": {
+      "id": "1045925117349339277",
+      "public_key": "",
+      "secret": "",
+      "token": "",
+      "redirect_uri": "http://localhost:8097/auth/discord/callback"
+    },
+    "owner": {
+      "guild_id": "1032081841563377765",
+      "user_id": "201600394353311744"
+    }
+  },
+  "database": {
+    "database": "pyrocord_member_milestone",
+    "host": "localhost",
+    "password": "password",
+    "port": 5432,
+    "user": "pyrocord_member_milestone"
+  }
+}

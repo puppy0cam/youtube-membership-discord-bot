@@ -3,3 +3,4 @@ config.json
 /dist
 /tsconfig.tsbuildinfo
 config.*.json
+!config.example.json
