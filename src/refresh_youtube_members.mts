@@ -21,8 +21,7 @@ async function *getMembershipsFromYouTube(database: PoolClient) {
     scope: string | null;
   }>(`SELECT "channel_id", "refresh_token", "expiry_date", "access_token", "token_type", "id_token", "scope" FROM "pyro_yt_member_handler"."youtube_auth" WHERE "expiry_date" > NOW() AND "channel_id" = $1;`, [config.google.youtube_channel_id]);
   if (row == null) {
-    console.log("Not authenticated");
-    return;
+    throw new Error("Not authenticated");
   }
   const oauth2Client = new google.auth.OAuth2({
     clientId: config.google.client_id,
